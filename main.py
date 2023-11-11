@@ -1,15 +1,22 @@
 import sys
-
 from twisted.internet import reactor
 from twisted.names import client, dns, server
 from twisted.python import log
 from twisted.internet import defer
 from twisted.logger import Logger
 from twisted.names import common, dns, error
+import requests
+import socket
+
+import requests.packages.urllib3.util.connection as urllib3_cn
+def allowed_gai_family4(): return socket.AF_INET  
+urllib3_cn.allowed_gai_family = allowed_gai_family4
 
 log = Logger()
 
-
+def get_gip_addr():
+    res = requests.get('https://ifconfig.me')
+    return res.text
 
 class SpoofResolver(common.ResolverBase):
     _ttl = 30
@@ -20,7 +27,7 @@ class SpoofResolver(common.ResolverBase):
         #ここをさわると書き換えるドメイン名を指定できるよ
         if "mlpac.digitalartscloud.com" in name.decode("utf-8"):
             print("digitalartsを検知")
-            addres = "ここにwebサーバーのipアドレス".encode("utf-8")
+            addres = get_gip_addr().encode("utf-8")
         else:
             return defer.fail(error.DomainError(name))
         answer, authority, additional = common.EMPTY_RESULT
@@ -45,7 +52,7 @@ class SpoofResolver(common.ResolverBase):
         return defer.fail(error.DomainError(name))
 
 def main():
-    log.startLogging(sys.stderr)
+    #log.startLogging(sys.stderr)
 
     factory = server.DNSServerFactory(
         clients=[
